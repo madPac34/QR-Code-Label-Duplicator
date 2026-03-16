@@ -18,24 +18,30 @@ Headless Raspberry Pi service that listens to a USB QR scanner (keyboard/HID mod
 - `labelclone.py` – main service loop and device I/O.
 - `config.example.py` – configurable defaults (copy to `config.py`).
 - `keyboard_layouts.py` – HID keycode to character mappings.
-- `parser.py` – parser scaffold for future field-aware templates.
+- `parser.py` – underscore-delimited payload parsing and field mapping.
 - `zpl.py` – template loading and placeholder rendering.
-- `templates/label_template.zpl` – current test label template.
+- `templates/label_template.zpl` – default production-style label template.
 - `systemd/labelclone.service` – background service definition.
 - `scripts/install.sh` – install/update helper for `/opt/labelclone`.
 
 ## Payload handling
 
-Current test template prints:
+The label payload format is now finalized as:
 
-1. Full raw payload as text.
-2. QR code containing the exact same payload.
+`<labornummer>_<matrix>_<date>`
 
 Example payload:
 
-`FL26-030001?Tomato?20.03.26?`
+`FL26-031347_CitroSäurEste_24.03.26`
 
-The parser scaffold already splits on `?` and keeps the original raw payload, so you can later replace the template and mapping logic without changing scanner/printer plumbing.
+Rendering behavior:
+
+1. `labornummer` is printed on the top line (`{{TOP_LINE}}`).
+2. `matrix` is printed in a wrapped middle text block (`{{PRODUCT_NAME}}`).
+3. `date` is printed as `T:<date>` (`{{DATE_LINE}}`).
+4. QR code contains the exact original payload (`{{QR_PAYLOAD}}`).
+
+If the payload does not contain all three underscore-separated fields, the service falls back to printing the raw payload text in templates that still use `{{TEXT_PAYLOAD}}`.
 
 ## Installation (one command)
 
@@ -82,8 +88,8 @@ sudo journalctl -u labelclone.service -f
 
 ## Notes for production template migration
 
-When payload format stabilizes, adapt:
+If label requirements change again, adapt:
 
-- `parser.py` to map specific `?`-separated fields.
+- `parser.py` field mapping logic.
 - `templates/label_template.zpl` placeholders/positions.
 - optionally `zpl.py` to render additional placeholders.

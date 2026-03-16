@@ -18,12 +18,14 @@ def _escape_zpl_field_data(value: str) -> str:
 def render_zpl(template_path: Path, parsed_payload: ParsedPayload) -> str:
     template = template_path.read_text(encoding="utf-8")
 
-    required = ("{{TEXT_PAYLOAD}}", "{{QR_PAYLOAD}}")
-    if any(token not in template for token in required):
-        raise TemplateError("Template must include {{TEXT_PAYLOAD}} and {{QR_PAYLOAD}} placeholders")
+    if "{{QR_PAYLOAD}}" not in template:
+        raise TemplateError("Template must include {{QR_PAYLOAD}} placeholder")
 
     replacements = {
-        "{{TEXT_PAYLOAD}}": _escape_zpl_field_data(parsed_payload.raw),
+        "{{TEXT_PAYLOAD}}": _escape_zpl_field_data(parsed_payload.text_payload),
+        "{{TOP_LINE}}": _escape_zpl_field_data(parsed_payload.labornummer or parsed_payload.raw),
+        "{{PRODUCT_NAME}}": _escape_zpl_field_data(parsed_payload.matrix),
+        "{{DATE_LINE}}": _escape_zpl_field_data(f"T:{parsed_payload.date}" if parsed_payload.date else ""),
         "{{QR_PAYLOAD}}": _escape_zpl_field_data(parsed_payload.raw),
     }
 
