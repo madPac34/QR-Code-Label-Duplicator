@@ -1,4 +1,4 @@
-"""Parser scaffold for QR payload interpretation."""
+"""Parser for QR payload interpretation."""
 
 from __future__ import annotations
 
@@ -9,12 +9,40 @@ from dataclasses import dataclass
 class ParsedPayload:
     raw: str
     fields: list[str]
+    labornummer: str
+    matrix: str
+    date: str
+
+    @property
+    def text_payload(self) -> str:
+        if self.labornummer and self.matrix and self.date:
+            return f"{self.labornummer}\n{self.matrix}\nT:{self.date}"
+
+        return self.raw
 
 
 def parse_payload(payload: str) -> ParsedPayload:
-    """Return raw payload and provisional field split scaffold.
+    """Parse payload in format `<labornummer>_<matrix>_<date>`.
 
-    Current behaviour intentionally keeps output template based on the full raw payload.
+    Underscore is the field separator. Additional underscores are treated as part
+    of the matrix field to keep labornummer and date mapping stable.
     """
 
-    return ParsedPayload(raw=payload, fields=payload.split("?"))
+    parts = [part.strip() for part in payload.split("_")]
+
+    if len(parts) >= 3:
+        labornummer = parts[0]
+        date = parts[-1]
+        matrix = "_".join(parts[1:-1]).strip()
+    else:
+        labornummer = ""
+        matrix = ""
+        date = ""
+
+    return ParsedPayload(
+        raw=payload,
+        fields=parts,
+        labornummer=labornummer,
+        matrix=matrix,
+        date=date,
+    )
