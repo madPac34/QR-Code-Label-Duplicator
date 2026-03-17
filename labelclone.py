@@ -101,13 +101,37 @@ def print_label(printer_device: str, zpl_text: str) -> None:
         printer.write(zpl_text.encode("utf-8"))
 
 
-def run() -> None:
+def save_latest_zpl(output_directory: Path, zpl_text: str) -> Path:
+    output_directory.mkdir(parents=True, exist_ok=True)
+    latest_path = output_directory / "latest.zpl"
+    latest_path.write_text(zpl_text, encoding="utf-8")
+    return latest_path
+
+
+def configure_logging(enable_log_file: bool, log_file_path: Path) -> None:
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if enable_log_file:
+        log_file_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_file_path, encoding="utf-8"))
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=handlers,
     )
 
+
+def run() -> None:
     config = load_config()
+    enable_test_log_file = bool(getattr(config, "ENABLE_TEST_LOG_FILE", False))
+    test_log_file_path = Path(
+        getattr(config, "TEST_LOG_FILE_PATH", Path("/tmp/labelclone-testing/labelclone.log"))
+    )
+    enable_test_zpl_fallback = bool(getattr(config, "ENABLE_TEST_ZPL_FALLBACK", False))
+    test_zpl_output_directory = Path(
+        getattr(config, "TEST_ZPL_OUTPUT_DIR", Path("/tmp/labelclone-testing"))
+    )
+    configure_logging(enable_test_log_file, test_log_file_path)
 
     scanner_device = detect_scanner_device(getattr(config, "SCANNER_DEVICE", None))
     keyboard_layout = getattr(config, "KEYBOARD_LAYOUT", "de")
@@ -121,6 +145,10 @@ def run() -> None:
     LOGGER.info("Using keyboard layout: %s", keyboard_layout)
     LOGGER.info("Using printer device: %s", printer_device)
     LOGGER.info("Using template: %s", template_path)
+    if enable_test_log_file:
+        LOGGER.info("Test log file enabled: %s", test_log_file_path)
+    if enable_test_zpl_fallback:
+        LOGGER.info("Test ZPL fallback enabled: %s/latest.zpl", test_zpl_output_directory)
 
     try:
         payload_stream = iter_scanned_payloads(scanner_device, keyboard_layout)
@@ -133,7 +161,18 @@ def run() -> None:
 
             parsed = parse_payload(payload)
             zpl_text = render_zpl(template_path, parsed)
-            print_label(printer_device, zpl_text)
+            try:
+                print_label(printer_device, zpl_text)
+            except (FileNotFoundError, OSError) as exc:
+                if not enable_test_zpl_fallback:
+                    raise
+
+                latest_path = save_latest_zpl(test_zpl_output_directory, zpl_text)
+                LOGGER.warning(
+                    "Printer unavailable (%s). Saved latest ZPL to %s",
+                    exc,
+                    latest_path,
+                )
 
             last_payload = payload
             last_print_ts = now

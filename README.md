@@ -73,6 +73,13 @@ Important keys:
 - `TEMPLATE_PATH`: path to ZPL template file.
 - `DUPLICATE_SUPPRESSION_SECONDS`: duplicate-blocking window.
 
+Testing-only toggles:
+
+- `ENABLE_TEST_LOG_FILE`: when `True`, writes logs to `TEST_LOG_FILE_PATH` in addition to stdout.
+- `TEST_LOG_FILE_PATH`: log file location (default `/tmp/labelclone-testing/labelclone.log`).
+- `ENABLE_TEST_ZPL_FALLBACK`: when `True`, if printer device write fails the service stores the latest generated ZPL as `latest.zpl`.
+- `TEST_ZPL_OUTPUT_DIR`: output folder for fallback `latest.zpl` (default `/tmp/labelclone-testing`).
+
 Then restart service:
 
 ```bash
