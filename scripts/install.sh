@@ -4,6 +4,7 @@ set -euo pipefail
 APP_DIR="/opt/labelclone"
 SERVICE_NAME="labelclone.service"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+UDEV_RULES_FILE="/etc/udev/rules.d/99-labelclone-devices.rules"
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Please run as root: sudo ./scripts/install.sh"
@@ -38,9 +39,23 @@ python3 -m venv "${APP_DIR}/.venv"
 
 install -m 0644 "${APP_DIR}/systemd/${SERVICE_NAME}" "/etc/systemd/system/${SERVICE_NAME}"
 
+cat > "${UDEV_RULES_FILE}" <<'RULES'
+# Stable scanner symlink for NT USB Keyboard in HID mode.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NT USB Keyboard", SYMLINK+="labelclone-scanner"
+
+# Stable raw printer symlink (first usblp device).
+SUBSYSTEM=="usbmisc", KERNEL=="lp[0-9]*", SYMLINK+="labelclone-printer"
+RULES
+
+udevadm control --reload-rules
+udevadm trigger --subsystem-match=input --subsystem-match=usb
+
 systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}"
 systemctl restart "${SERVICE_NAME}"
 
 echo "Installation complete."
 echo "Edit ${APP_DIR}/config.py if needed, then: systemctl restart ${SERVICE_NAME}"
+echo "Device symlinks:"
+echo "  Scanner: /dev/labelclone-scanner (NT USB Keyboard)"
+echo "  Printer: /dev/labelclone-printer"
