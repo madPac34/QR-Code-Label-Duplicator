@@ -5,15 +5,16 @@ Copy this file to config.py and adapt values for your hardware.
 
 from pathlib import Path
 
-# Optional fixed scanner event device, e.g. "/dev/input/event3".
-# Leave as None to auto-detect from /dev/input/by-id/*event-kbd.
-SCANNER_DEVICE = None
+# Stable scanner symlink created by scripts/install.sh udev rule.
+# Set to None to auto-detect from /dev/input/by-id/*event-kbd.
+SCANNER_DEVICE = "/dev/labelclone-scanner"
 
 # Keyboard layout used by the scanner ("de" or "us").
 KEYBOARD_LAYOUT = "de"
 
-# Label printer raw device path.
-PRINTER_DEVICE = "/dev/usb/lp0"
+# Stable printer symlink created by scripts/install.sh udev rule.
+# If missing, labelclone falls back to first /dev/usb/lp* device.
+PRINTER_DEVICE = "/dev/labelclone-printer"
 
 # Absolute or relative path to the ZPL template.
 TEMPLATE_PATH = Path("/opt/labelclone/templates/label_template.zpl")

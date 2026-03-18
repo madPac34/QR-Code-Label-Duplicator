@@ -5,7 +5,9 @@ Headless Raspberry Pi service that listens to a USB QR scanner (keyboard/HID mod
 ## Features
 
 - Reads scanner input directly from Linux event device (`/dev/input/event*`) using `evdev`.
-- Auto-detects scanner from `/dev/input/by-id/*event-kbd`, with optional fixed-device override.
+- Uses stable udev symlinks for scanner/printer (`/dev/labelclone-scanner`, `/dev/labelclone-printer`).
+- Auto-detects scanner from `/dev/input/by-id/*event-kbd` when scanner symlink is disabled.
+- Auto-detects printer from `/dev/usb/lp*` when printer symlink/path is unavailable.
 - Supports keyboard layout mapping for `de` and `us`.
 - UTF-8 end-to-end (`^CI28` in ZPL + UTF-8 bytes to printer) including umlauts (`ä ö ü Ä Ö Ü ß`).
 - Duplicate scan suppression (same payload scanned again within configured window is ignored).
@@ -58,6 +60,7 @@ Installer actions:
 3. Preserves existing `/opt/labelclone/config.py` on upgrades.
 4. Creates virtual environment and installs Python dependencies.
 5. Installs `systemd` service, enables it, and starts/restarts it.
+6. Installs udev rules that create stable scanner/printer symlinks.
 
 ## Configuration
 
@@ -67,9 +70,9 @@ After first install edit:
 
 Important keys:
 
-- `SCANNER_DEVICE`: set explicit event device path or keep `None` for auto-detect.
+- `SCANNER_DEVICE`: default `/dev/labelclone-scanner` (NT USB Keyboard via udev). Set `None` for by-id auto-detect.
 - `KEYBOARD_LAYOUT`: `"de"` or `"us"`.
-- `PRINTER_DEVICE`: raw printer path (default `/dev/usb/lp0`).
+- `PRINTER_DEVICE`: default `/dev/labelclone-printer` (udev). If missing, service falls back to first `/dev/usb/lp*`.
 - `TEMPLATE_PATH`: path to ZPL template file.
 - `DUPLICATE_SUPPRESSION_SECONDS`: duplicate-blocking window.
 

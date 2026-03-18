@@ -41,7 +41,13 @@ def load_config():
 
 def detect_scanner_device(configured_device: str | None) -> str:
     if configured_device:
-        return configured_device
+        configured_path = Path(configured_device)
+        if configured_path.exists():
+            return str(configured_path.resolve())
+        raise FileNotFoundError(
+            f"Configured scanner device not found: {configured_device}. "
+            "Check udev rule/symlink or set SCANNER_DEVICE in config.py."
+        )
 
     by_id_dir = Path("/dev/input/by-id")
     candidates = sorted(by_id_dir.glob("*event-kbd"))
@@ -49,6 +55,25 @@ def detect_scanner_device(configured_device: str | None) -> str:
         raise FileNotFoundError(
             "No scanner device found in /dev/input/by-id/*event-kbd. "
             "Set SCANNER_DEVICE in config.py."
+        )
+
+    return str(candidates[0].resolve())
+
+def detect_printer_device(configured_device: str | None) -> str:
+    if configured_device:
+        configured_path = Path(configured_device)
+        if configured_path.exists():
+            return str(configured_path.resolve())
+        LOGGER.warning(
+            "Configured printer device not found: %s. Falling back to auto-detection.",
+            configured_device,
+        )
+
+    candidates = sorted(Path("/dev/usb").glob("lp*"))
+    if not candidates:
+        raise FileNotFoundError(
+            "No printer device found in /dev/usb/lp*. "
+            "Set PRINTER_DEVICE in config.py or add a udev symlink."
         )
 
     return str(candidates[0].resolve())
@@ -135,7 +160,7 @@ def run() -> None:
 
     scanner_device = detect_scanner_device(getattr(config, "SCANNER_DEVICE", None))
     keyboard_layout = getattr(config, "KEYBOARD_LAYOUT", "de")
-    printer_device = getattr(config, "PRINTER_DEVICE", "/dev/usb/lp0")
+    printer_device = detect_printer_device(getattr(config, "PRINTER_DEVICE", "/dev/usb/lp0"))
     template_path = Path(getattr(config, "TEMPLATE_PATH", Path("templates/label_template.zpl")))
     dedupe_window = float(getattr(config, "DUPLICATE_SUPPRESSION_SECONDS", 0.5))
 
