@@ -254,6 +254,10 @@ def run() -> None:
                     exc,
                     latest_path,
                 )
+            else:
+                if enable_test_zpl_fallback:
+                    latest_path = save_latest_zpl(test_zpl_output_directory, zpl_text)
+                    LOGGER.info("Saved latest ZPL to %s", latest_path)
 
             last_payload = payload
             last_print_ts = now
