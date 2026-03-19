@@ -11,8 +11,27 @@ class TemplateError(RuntimeError):
     """Raised when required placeholders are missing."""
 
 
-def _escape_zpl_field_data(value: str) -> str:
-    return value.replace("^", "^^").replace("~", "~~")
+def _encode_zpl_field_data(value: str) -> str:
+    """Encode field data for safe ZPL rendering with ^FH\\ enabled.
+
+    Zebra interprets ``\\xx`` as a hexadecimal byte when ``^FH\\`` is active.
+    We hex-encode non-ASCII bytes and ZPL control characters to preserve UTF-8
+    payloads and avoid accidental command parsing.
+    """
+
+    safe_ascii = {
+        *range(ord(" "), ord("~") + 1),
+    }
+    always_encode = {ord("^"), ord("~"), ord("\\")}
+
+    chunks: list[str] = []
+    for byte in value.encode("utf-8"):
+        if byte in safe_ascii and byte not in always_encode:
+            chunks.append(chr(byte))
+        else:
+            chunks.append(f"\\{byte:02X}")
+
+    return "".join(chunks)
 
 
 def render_zpl(template_path: Path, parsed_payload: ParsedPayload) -> str:
@@ -22,11 +41,11 @@ def render_zpl(template_path: Path, parsed_payload: ParsedPayload) -> str:
         raise TemplateError("Template must include {{QR_PAYLOAD}} placeholder")
 
     replacements = {
-        "{{TEXT_PAYLOAD}}": _escape_zpl_field_data(parsed_payload.text_payload),
-        "{{TOP_LINE}}": _escape_zpl_field_data(parsed_payload.labornummer or parsed_payload.raw),
-        "{{PRODUCT_NAME}}": _escape_zpl_field_data(parsed_payload.matrix),
-        "{{DATE_LINE}}": _escape_zpl_field_data(f"T:{parsed_payload.date}" if parsed_payload.date else ""),
-        "{{QR_PAYLOAD}}": _escape_zpl_field_data(parsed_payload.raw),
+        "{{TEXT_PAYLOAD}}": _encode_zpl_field_data(parsed_payload.text_payload),
+        "{{TOP_LINE}}": _encode_zpl_field_data(parsed_payload.labornummer or parsed_payload.raw),
+        "{{PRODUCT_NAME}}": _encode_zpl_field_data(parsed_payload.matrix),
+        "{{DATE_LINE}}": _encode_zpl_field_data(f"T:{parsed_payload.date}" if parsed_payload.date else ""),
+        "{{QR_PAYLOAD}}": _encode_zpl_field_data(parsed_payload.raw),
     }
 
     rendered = template
