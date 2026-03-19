@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import errno
 import importlib.util
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -121,9 +123,54 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
         buffer.append(shifted if shift_pressed else normal)
 
 
-def print_label(printer_device: str, zpl_text: str) -> None:
-    with open(printer_device, "wb") as printer:
-        printer.write(zpl_text.encode("utf-8"))
+def _normalize_zpl(zpl_text: str) -> bytes:
+    content = zpl_text.strip()
+    if not content.startswith("^XA"):
+        raise ValueError("ZPL payload must start with ^XA")
+    if not content.endswith("^XZ"):
+        raise ValueError("ZPL payload must end with ^XZ")
+
+    return f"{content}\n".encode("utf-8")
+
+
+def print_label(printer_device: str, zpl_text: str, retries: int = 1) -> None:
+    payload = _normalize_zpl(zpl_text)
+
+    last_error: OSError | None = None
+    attempts = retries + 1
+
+    for attempt in range(1, attempts + 1):
+        fd = None
+        try:
+            fd = os.open(printer_device, os.O_WRONLY)
+            bytes_written = 0
+            while bytes_written < len(payload):
+                written = os.write(fd, payload[bytes_written:])
+                if written == 0:
+                    raise OSError("Printer write returned 0 bytes")
+                bytes_written += written
+
+            os.fsync(fd)
+            LOGGER.debug(
+                "Sent %s bytes to printer device %s (attempt %s/%s)",
+                bytes_written,
+                printer_device,
+                attempt,
+                attempts,
+            )
+            return
+        except OSError as exc:
+            last_error = exc
+            retryable_errno = {errno.EBUSY, errno.EAGAIN, errno.EINTR}
+            if attempt >= attempts or getattr(exc, "errno", None) not in retryable_errno:
+                raise
+            time.sleep(0.05)
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+    if last_error is not None:
+        raise last_error
 
 
 def save_latest_zpl(output_directory: Path, zpl_text: str) -> Path:
@@ -203,7 +250,7 @@ def run() -> None:
             last_print_ts = now
             LOGGER.info("Printed payload: %r", payload)
 
-    except (UnsupportedLayoutError, FileNotFoundError, PermissionError, TemplateError) as exc:
+    except (UnsupportedLayoutError, FileNotFoundError, PermissionError, TemplateError, ValueError) as exc:
         LOGGER.exception("Fatal configuration/runtime error: %s", exc)
         raise SystemExit(1) from exc
 
