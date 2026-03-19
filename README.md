@@ -9,7 +9,7 @@ Headless Raspberry Pi service that listens to a USB QR scanner (keyboard/HID mod
 - Auto-detects scanner from `/dev/input/by-id/*event-kbd` when scanner symlink is disabled.
 - Auto-detects printer from `/dev/usb/lp*` when printer symlink/path is unavailable.
 - Supports keyboard layout mapping for `de` and `us`.
-- UTF-8 end-to-end (`^CI28` in ZPL + UTF-8 bytes to printer) including umlauts (`ä ö ü Ä Ö Ü ß`).
+- UTF-8 end-to-end (`^CI28` + `^FH\` in ZPL and UTF-8 bytes to printer) including umlauts (`ä ö ü Ä Ö Ü ß`).
 - Duplicate scan suppression (same payload scanned again within configured window is ignored).
 - Template-based label rendering with placeholders for easy migration to a production layout.
 - `systemd` unit for auto-start at boot and restart on failure.
