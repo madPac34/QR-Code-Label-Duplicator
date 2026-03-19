@@ -7,6 +7,7 @@ import errno
 import importlib.util
 import logging
 import os
+import stat
 import time
 from pathlib import Path
 
@@ -150,7 +151,13 @@ def print_label(printer_device: str, zpl_text: str, retries: int = 1) -> None:
                     raise OSError("Printer write returned 0 bytes")
                 bytes_written += written
 
-            os.fsync(fd)
+            mode = os.fstat(fd).st_mode
+            if stat.S_ISCHR(mode):
+                LOGGER.debug(
+                    "Skipping fsync for character device printer %s", printer_device
+                )
+            else:
+                os.fsync(fd)
             LOGGER.debug(
                 "Sent %s bytes to printer device %s (attempt %s/%s)",
                 bytes_written,
@@ -233,8 +240,10 @@ def run() -> None:
 
             parsed = parse_payload(payload)
             zpl_text = render_zpl(template_path, parsed)
+            printed_to_device = False
             try:
                 print_label(printer_device, zpl_text)
+                printed_to_device = True
             except (FileNotFoundError, OSError) as exc:
                 if not enable_test_zpl_fallback:
                     raise
@@ -248,7 +257,10 @@ def run() -> None:
 
             last_payload = payload
             last_print_ts = now
-            LOGGER.info("Printed payload: %r", payload)
+            if printed_to_device:
+                LOGGER.info("Printed payload: %r", payload)
+            else:
+                LOGGER.info("Rendered payload without printer output: %r", payload)
 
     except (UnsupportedLayoutError, FileNotFoundError, PermissionError, TemplateError, ValueError) as exc:
         LOGGER.exception("Fatal configuration/runtime error: %s", exc)
