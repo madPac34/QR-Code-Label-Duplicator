@@ -89,6 +89,25 @@ Then restart service:
 sudo systemctl restart labelclone.service
 ```
 
+### TSC TC300 over USB
+
+This project is compatible with a **TSC TC300** over USB when the printer is in **ZPL-compatible mode**.
+
+Recommended setup:
+
+1. Connect the TC300 by USB and run the installer so udev rules are installed:
+   ```bash
+   sudo ./scripts/install.sh
+   ```
+2. Verify the stable printer symlink exists:
+   ```bash
+   ls -l /dev/labelclone-printer
+   ```
+3. Keep `PRINTER_DEVICE` as `/dev/labelclone-printer` in `/opt/labelclone/config.py`.
+4. Ensure the printer language/emulation is set to ZPL-compatible mode on the printer side.
+
+If the symlink is not present, you can temporarily point `PRINTER_DEVICE` to `/dev/usb/lp0` (or whichever `/dev/usb/lp*` node matches the TC300) and restart the service.
+
 ## Service operations
 
 ```bash

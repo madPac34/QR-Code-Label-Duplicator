@@ -43,7 +43,10 @@ cat > "${UDEV_RULES_FILE}" <<'RULES'
 # Stable scanner symlink for NT USB Keyboard in HID mode.
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="NT USB Keyboard", SYMLINK+="labelclone-scanner"
 
-# Stable raw printer symlink (first usblp device).
+# Stable raw printer symlink for TSC label printers (including TC300) on USB.
+SUBSYSTEM=="usbmisc", KERNEL=="lp[0-9]*", ATTRS{manufacturer}=="TSC*", SYMLINK+="labelclone-printer"
+
+# Generic fallback symlink for environments without matching manufacturer metadata.
 SUBSYSTEM=="usbmisc", KERNEL=="lp[0-9]*", SYMLINK+="labelclone-printer"
 RULES
 

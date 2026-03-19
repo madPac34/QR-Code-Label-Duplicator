@@ -14,6 +14,7 @@ KEYBOARD_LAYOUT = "de"
 
 # Stable printer symlink created by scripts/install.sh udev rule.
 # If missing, labelclone falls back to first /dev/usb/lp* device.
+# For a TSC TC300 over USB, keep this as /dev/labelclone-printer.
 PRINTER_DEVICE = "/dev/labelclone-printer"
 
 # Absolute or relative path to the ZPL template.
