@@ -20,6 +20,19 @@ _LAYOUT_DE = {
     "KEY_SLASH": ("-", "_"),
 }
 
+_ALTGR_DE = {
+    "KEY_Q": "@",
+    "KEY_E": "€",
+    "KEY_7": "{",
+    "KEY_8": "[",
+    "KEY_9": "]",
+    "KEY_0": "}",
+    "KEY_MINUS": "\\",
+    "KEY_RIGHTBRACE": "~",
+    "KEY_BACKSLASH": "|",
+    "KEY_M": "µ",
+}
+
 _LAYOUT_US = {
     "KEY_SPACE": (" ", " "),
     "KEY_MINUS": ("-", "_"),
@@ -66,36 +79,48 @@ class UnsupportedLayoutError(ValueError):
     """Raised when an unknown keyboard layout is configured."""
 
 
-def _base_layout() -> dict[str, tuple[str, str]]:
+def _base_layout() -> dict[str, tuple[str, str, str | None]]:
     mapping = {}
 
     for number in range(10):
         key = f"KEY_{number}"
-        mapping[key] = (str(number), str(number))
+        mapping[key] = (str(number), str(number), None)
 
     for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
         key = f"KEY_{char}"
-        mapping[key] = (char.lower(), char)
+        mapping[key] = (char.lower(), char, None)
 
     return mapping
 
 
-def _build_layout(base: dict[str, tuple[str, str]], specific: dict[str, tuple[str, str]], shifted_digits: dict[str, str]) -> dict[int, tuple[str, str]]:
+def _build_layout(
+    base: dict[str, tuple[str, str, str | None]],
+    specific: dict[str, tuple[str, str]],
+    shifted_digits: dict[str, str],
+    altgr: dict[str, str] | None = None,
+) -> dict[int, tuple[str, str, str | None]]:
     layout = dict(base)
-    layout.update(specific)
+    for key_name, (normal, shifted) in specific.items():
+        _, _, existing_altgr = layout.get(key_name, ("", "", None))
+        layout[key_name] = (normal, shifted, existing_altgr)
 
     for key_name, shifted in shifted_digits.items():
-        normal, _ = layout[key_name]
-        layout[key_name] = (normal, shifted)
+        normal, _, altgr_char = layout[key_name]
+        layout[key_name] = (normal, shifted, altgr_char)
+
+    if altgr:
+        for key_name, altgr_char in altgr.items():
+            normal, shifted, _ = layout[key_name]
+            layout[key_name] = (normal, shifted, altgr_char)
 
     return {getattr(ecodes, name): pair for name, pair in layout.items() if hasattr(ecodes, name)}
 
 
-def get_layout(layout_name: str) -> dict[int, tuple[str, str]]:
+def get_layout(layout_name: str) -> dict[int, tuple[str, str, str | None]]:
     base = _base_layout()
 
     if layout_name == "de":
-        return _build_layout(base, _LAYOUT_DE, _DIGIT_DE_SHIFT)
+        return _build_layout(base, _LAYOUT_DE, _DIGIT_DE_SHIFT, _ALTGR_DE)
 
     if layout_name == "us":
         return _build_layout(base, _LAYOUT_US, _DIGIT_US_SHIFT)

@@ -89,6 +89,7 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
 
     buffer: list[str] = []
     shift_pressed = False
+    right_alt_pressed = False
 
     for event in scanner.read_loop():
         if event.type != ecodes.EV_KEY:
@@ -99,6 +100,10 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
 
         if keycode in (ecodes.KEY_LEFTSHIFT, ecodes.KEY_RIGHTSHIFT):
             shift_pressed = key_event.keystate != key_event.key_up
+            continue
+
+        if keycode == ecodes.KEY_RIGHTALT:
+            right_alt_pressed = key_event.keystate != key_event.key_up
             continue
 
         if key_event.keystate != key_event.key_down:
@@ -120,8 +125,11 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
             LOGGER.debug("Ignoring unmapped keycode: %s", keycode)
             continue
 
-        normal, shifted = layout[keycode]
-        buffer.append(shifted if shift_pressed else normal)
+        normal, shifted, altgr = layout[keycode]
+        if right_alt_pressed and altgr is not None:
+            buffer.append(altgr)
+        else:
+            buffer.append(shifted if shift_pressed else normal)
 
 
 def _normalize_zpl(zpl_text: str) -> bytes:
