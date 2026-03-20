@@ -233,38 +233,44 @@ def run() -> None:
         payload_stream = iter_scanned_payloads(scanner_device, keyboard_layout)
 
         for payload in payload_stream:
-            now = time.monotonic()
-            if payload == last_payload and now - last_print_ts < dedupe_window:
-                LOGGER.info("Duplicate payload suppressed: %r", payload)
-                continue
-
-            parsed = parse_payload(payload)
-            zpl_text = render_zpl(template_path, parsed)
-            printed_to_device = False
             try:
-                print_label(printer_device, zpl_text)
-                printed_to_device = True
-            except (FileNotFoundError, OSError) as exc:
-                if not enable_test_zpl_fallback:
-                    raise
+                now = time.monotonic()
+                if payload == last_payload and now - last_print_ts < dedupe_window:
+                    LOGGER.info("Duplicate payload suppressed: %r", payload)
+                    continue
 
-                latest_path = save_latest_zpl(test_zpl_output_directory, zpl_text)
-                LOGGER.warning(
-                    "Printer unavailable (%s). Saved latest ZPL to %s",
-                    exc,
-                    latest_path,
-                )
-            else:
-                if enable_test_zpl_fallback:
+                parsed = parse_payload(payload)
+                zpl_text = render_zpl(template_path, parsed)
+                printed_to_device = False
+                try:
+                    print_label(printer_device, zpl_text)
+                    printed_to_device = True
+                except (FileNotFoundError, OSError) as exc:
+                    if not enable_test_zpl_fallback:
+                        raise
+
                     latest_path = save_latest_zpl(test_zpl_output_directory, zpl_text)
-                    LOGGER.info("Saved latest ZPL to %s", latest_path)
+                    LOGGER.warning(
+                        "Printer unavailable (%s). Saved latest ZPL to %s",
+                        exc,
+                        latest_path,
+                    )
+                else:
+                    if enable_test_zpl_fallback:
+                        latest_path = save_latest_zpl(test_zpl_output_directory, zpl_text)
+                        LOGGER.info("Saved latest ZPL to %s", latest_path)
 
-            last_payload = payload
-            last_print_ts = now
-            if printed_to_device:
-                LOGGER.info("Printed payload: %r", payload)
-            else:
-                LOGGER.info("Rendered payload without printer output: %r", payload)
+                last_payload = payload
+                last_print_ts = now
+                if printed_to_device:
+                    LOGGER.info("Printed payload: %r", payload)
+                else:
+                    LOGGER.info("Rendered payload without printer output: %r", payload)
+            except Exception:
+                LOGGER.exception(
+                    "Failed processing payload %r. Keeping service alive and waiting for next scan.",
+                    payload,
+                )
 
     except (UnsupportedLayoutError, FileNotFoundError, PermissionError, TemplateError, ValueError) as exc:
         LOGGER.exception("Fatal configuration/runtime error: %s", exc)
