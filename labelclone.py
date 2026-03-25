@@ -195,10 +195,11 @@ def save_latest_zpl(output_directory: Path, zpl_text: str) -> Path:
     return latest_path
 
 
-def _payload_log_context(payload: str) -> tuple[str, str]:
-    """Return human-readable payload and its UTF-8 hex bytes for logs."""
+def _payload_log_context(payload: str) -> tuple[str, str, str]:
+    """Return raw text, escaped text, and UTF-8 hex bytes for logs."""
 
-    return payload, payload.encode("utf-8").hex(" ").upper()
+    escaped = payload.encode("unicode_escape").decode("ascii")
+    return payload, escaped, payload.encode("utf-8").hex(" ").upper()
 
 
 def configure_logging(enable_log_file: bool, log_file_path: Path) -> None:
@@ -248,12 +249,17 @@ def run() -> None:
 
         for payload in payload_stream:
             try:
-                payload_text, payload_hex = _payload_log_context(payload)
-                LOGGER.info("Raw scanned input: %r (utf8_hex=%s)", payload_text, payload_hex)
+                payload_text, payload_escaped, payload_hex = _payload_log_context(payload)
+                LOGGER.info(
+                    "Raw scanned input: %s (escaped=%s utf8_hex=%s)",
+                    payload_text,
+                    payload_escaped,
+                    payload_hex,
+                )
 
                 now = time.monotonic()
                 if payload == last_payload and now - last_print_ts < dedupe_window:
-                    LOGGER.info("Duplicate payload suppressed: %s (utf8_hex=%s)", payload_text, payload_hex)
+                    LOGGER.info("Duplicate payload suppressed: %s (escaped=%s utf8_hex=%s)", payload_text, payload_escaped, payload_hex)
                     continue
 
                 parsed = parse_payload(payload)
@@ -280,14 +286,15 @@ def run() -> None:
                 last_payload = payload
                 last_print_ts = now
                 if printed_to_device:
-                    LOGGER.info("Printed payload: %s (utf8_hex=%s)", payload_text, payload_hex)
+                    LOGGER.info("Printed payload: %s (escaped=%s utf8_hex=%s)", payload_text, payload_escaped, payload_hex)
                 else:
-                    LOGGER.info("Rendered payload without printer output: %s (utf8_hex=%s)", payload_text, payload_hex)
+                    LOGGER.info("Rendered payload without printer output: %s (escaped=%s utf8_hex=%s)", payload_text, payload_escaped, payload_hex)
             except Exception:
-                payload_text, payload_hex = _payload_log_context(payload)
+                payload_text, payload_escaped, payload_hex = _payload_log_context(payload)
                 LOGGER.exception(
-                    "Failed processing payload %s (utf8_hex=%s). Keeping service alive and waiting for next scan.",
+                    "Failed processing payload %s (escaped=%s utf8_hex=%s). Keeping service alive and waiting for next scan.",
                     payload_text,
+                    payload_escaped,
                     payload_hex,
                 )
 
