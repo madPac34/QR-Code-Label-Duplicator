@@ -34,6 +34,16 @@ def _encode_zpl_field_data(value: str) -> str:
     return "".join(chunks)
 
 
+def _encode_zpl_hex_bytes(value: str) -> str:
+    """Encode every UTF-8 byte as ``\\xx`` for binary-safe fields.
+
+    QR payloads are particularly sensitive to mode/control parsing.
+    Emitting pure hex escapes guarantees special characters are preserved.
+    """
+
+    return "".join(f"\\{byte:02X}" for byte in value.encode("utf-8"))
+
+
 def render_zpl(template_path: Path, parsed_payload: ParsedPayload) -> str:
     template = template_path.read_text(encoding="utf-8")
 
@@ -45,7 +55,7 @@ def render_zpl(template_path: Path, parsed_payload: ParsedPayload) -> str:
         "{{TOP_LINE}}": _encode_zpl_field_data(parsed_payload.labornummer or parsed_payload.raw),
         "{{PRODUCT_NAME}}": _encode_zpl_field_data(parsed_payload.matrix),
         "{{DATE_LINE}}": _encode_zpl_field_data(f"T:{parsed_payload.date}" if parsed_payload.date else ""),
-        "{{QR_PAYLOAD}}": _encode_zpl_field_data(parsed_payload.raw),
+        "{{QR_PAYLOAD}}": _encode_zpl_hex_bytes(parsed_payload.raw),
     }
 
     rendered = template
