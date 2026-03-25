@@ -28,12 +28,16 @@ def parse_payload(payload: str) -> ParsedPayload:
     of the matrix field to keep labornummer and date mapping stable.
     """
 
-    parts = [part.strip() for part in payload.split("_")]
+    # Keep field contents byte-for-byte as scanned (decoded as UTF-8 text).
+    # Trimming here can silently remove meaningful characters (including
+    # scanner-delivered control/spacing chars) and cause printed/logged
+    # payloads to differ from what was scanned.
+    parts = payload.split("_")
 
     if len(parts) >= 3:
         labornummer = parts[0]
         date = parts[-1]
-        matrix = "_".join(parts[1:-1]).strip()
+        matrix = "_".join(parts[1:-1])
     else:
         labornummer = ""
         matrix = ""

@@ -110,7 +110,7 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
             continue
 
         if keycode == ecodes.KEY_ENTER:
-            payload = "".join(buffer).strip()
+            payload = "".join(buffer)
             buffer.clear()
             if payload:
                 yield payload

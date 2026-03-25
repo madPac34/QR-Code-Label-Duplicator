@@ -34,6 +34,24 @@ class ParsePayloadUtf8Tests(unittest.TestCase):
         self.assertEqual(parsed.date, "")
         self.assertEqual(parsed.text_payload, payload)
 
+    def test_preserves_whitespace_inside_structured_fields(self) -> None:
+        payload = " LAB-01 _ Größe Premium _2026-03-25 "
+
+        parsed = parse_payload(payload)
+
+        self.assertEqual(parsed.labornummer, " LAB-01 ")
+        self.assertEqual(parsed.matrix, " Größe Premium ")
+        self.assertEqual(parsed.date, "2026-03-25 ")
+
+    def test_preserves_leading_and_trailing_utf8_whitespace(self) -> None:
+        payload = "\u00A0ÄBC_Matrix_2026-03-25\u00A0"
+
+        parsed = parse_payload(payload)
+
+        self.assertEqual(parsed.raw, payload)
+        self.assertEqual(parsed.labornummer, "\u00A0ÄBC")
+        self.assertEqual(parsed.date, "2026-03-25\u00A0")
+
 
 if __name__ == "__main__":
     unittest.main()
