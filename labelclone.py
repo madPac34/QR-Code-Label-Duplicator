@@ -248,9 +248,11 @@ def run() -> None:
 
         for payload in payload_stream:
             try:
+                payload_text, payload_hex = _payload_log_context(payload)
+                LOGGER.info("Raw scanned input: %r (utf8_hex=%s)", payload_text, payload_hex)
+
                 now = time.monotonic()
                 if payload == last_payload and now - last_print_ts < dedupe_window:
-                    payload_text, payload_hex = _payload_log_context(payload)
                     LOGGER.info("Duplicate payload suppressed: %s (utf8_hex=%s)", payload_text, payload_hex)
                     continue
 
@@ -278,10 +280,8 @@ def run() -> None:
                 last_payload = payload
                 last_print_ts = now
                 if printed_to_device:
-                    payload_text, payload_hex = _payload_log_context(payload)
                     LOGGER.info("Printed payload: %s (utf8_hex=%s)", payload_text, payload_hex)
                 else:
-                    payload_text, payload_hex = _payload_log_context(payload)
                     LOGGER.info("Rendered payload without printer output: %s (utf8_hex=%s)", payload_text, payload_hex)
             except Exception:
                 payload_text, payload_hex = _payload_log_context(payload)
