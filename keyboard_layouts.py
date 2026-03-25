@@ -18,6 +18,7 @@ _LAYOUT_DE = {
     "KEY_COMMA": (",", ";"),
     "KEY_DOT": (".", ":"),
     "KEY_SLASH": ("-", "_"),
+    "KEY_102ND": ("<", ">"),
 }
 
 _ALTGR_DE = {
@@ -30,6 +31,7 @@ _ALTGR_DE = {
     "KEY_MINUS": "\\",
     "KEY_RIGHTBRACE": "~",
     "KEY_BACKSLASH": "|",
+    "KEY_102ND": "|",
     "KEY_M": "µ",
 }
 
@@ -46,6 +48,7 @@ _LAYOUT_US = {
     "KEY_COMMA": (",", "<"),
     "KEY_DOT": (".", ">"),
     "KEY_SLASH": ("/", "?"),
+    "KEY_102ND": ("\\", "|"),
 }
 
 _DIGIT_US_SHIFT = {
@@ -89,6 +92,27 @@ def _base_layout() -> dict[str, tuple[str, str, str | None]]:
     for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
         key = f"KEY_{char}"
         mapping[key] = (char.lower(), char, None)
+
+    keypad_mapping = {
+        "KEY_KP0": "0",
+        "KEY_KP1": "1",
+        "KEY_KP2": "2",
+        "KEY_KP3": "3",
+        "KEY_KP4": "4",
+        "KEY_KP5": "5",
+        "KEY_KP6": "6",
+        "KEY_KP7": "7",
+        "KEY_KP8": "8",
+        "KEY_KP9": "9",
+        "KEY_KPDOT": ".",
+        "KEY_KPSLASH": "/",
+        "KEY_KPASTERISK": "*",
+        "KEY_KPMINUS": "-",
+        "KEY_KPPLUS": "+",
+        "KEY_KPCOMMA": ",",
+    }
+    for key, char in keypad_mapping.items():
+        mapping[key] = (char, char, None)
 
     return mapping
 
