@@ -89,7 +89,7 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
 
     buffer: list[str] = []
     shift_pressed = False
-    right_alt_pressed = False
+    alt_pressed = False
 
     for event in scanner.read_loop():
         if event.type != ecodes.EV_KEY:
@@ -102,8 +102,8 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
             shift_pressed = key_event.keystate != key_event.key_up
             continue
 
-        if keycode == ecodes.KEY_RIGHTALT:
-            right_alt_pressed = key_event.keystate != key_event.key_up
+        if keycode in (ecodes.KEY_RIGHTALT, ecodes.KEY_LEFTALT):
+            alt_pressed = key_event.keystate != key_event.key_up
             continue
 
         if key_event.keystate != key_event.key_down:
@@ -126,7 +126,7 @@ def iter_scanned_payloads(device_path: str, layout_name: str):
             continue
 
         normal, shifted, altgr = layout[keycode]
-        if right_alt_pressed and altgr is not None:
+        if alt_pressed and altgr is not None:
             buffer.append(altgr)
         else:
             buffer.append(shifted if shift_pressed else normal)
